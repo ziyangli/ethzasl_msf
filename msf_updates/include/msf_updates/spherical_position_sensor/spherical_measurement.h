@@ -511,13 +511,9 @@ struct DistanceMeasurement : public DistanceMeasurementBase {
       }
 
       // Call update step in base class.
-      this->CalculateAndApplyCorrection(state_nonconst_new, core, H_new, r_old,
-                                        R_);
+      this->CalculateAndApplyCorrection(state_nonconst_new, core, H_new, r_old, R_);
     } else {
-      ROS_ERROR_STREAM_THROTTLE(
-          1,
-          "You chose to apply the position measurement as a relative quantitiy, "
-          "which is currently not implemented.");
+      ROS_ERROR_STREAM_THROTTLE(1, "You chose to apply the position measurement as a relative quantitiy, which is currently not implemented.");
     }
   }
 };

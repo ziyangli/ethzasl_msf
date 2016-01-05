@@ -32,32 +32,24 @@ class SensorHandler {
   std::string topic_namespace_;
   std::string parameternamespace_;
   bool received_first_measurement_;
+
   void SetSensorID(int ID) {
     sensorID = ID;
   }
+
   void SequenceWatchDog(size_t seq, const std::string& topic) {
     if (static_cast<int>(seq) != lastseq_ + 1 && lastseq_ != 0) {
-      MSF_WARN_STREAM(
-          topic << ": message drop curr seq:" << seq << " expected: "
-                << lastseq_ + 1);
+      MSF_WARN_STREAM(topic << ": message drop curr seq:" << seq << " expected: " << lastseq_ + 1);
     }
     lastseq_ = seq;
   }
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  SensorHandler(MSF_SensorManager<EKFState_T>& mng,
-                const std::string& topic_namespace,
-                const std::string& parameternamespace)
-      : lastseq_(0),
-        manager_(mng),
-        sensorID(constants::INVALID_ID),
-        topic_namespace_(topic_namespace),
-        parameternamespace_(parameternamespace),
-        received_first_measurement_(false) {
-  }
-  virtual ~SensorHandler() {
-  }
+  SensorHandler(MSF_SensorManager<EKFState_T>& mng, const std::string& topic_namespace, const std::string& parameternamespace) : lastseq_(0), manager_(mng), sensorID(constants::INVALID_ID), topic_namespace_(topic_namespace), parameternamespace_(parameternamespace), received_first_measurement_(false) {}
+
+  virtual ~SensorHandler() {}
+
   bool ReceivedFirstMeasurement() const {return received_first_measurement_;}
 };
 }

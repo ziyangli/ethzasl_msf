@@ -56,10 +56,8 @@ class PoseSensorHandler : public msf_core::SensorHandler<
 
   msf_updates::PoseDistorter::Ptr distorter_;
 
-  void ProcessPoseMeasurement(
-      const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg);
-  void MeasurementCallback(
-      const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg);
+  void ProcessPoseMeasurement(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg);
+  void MeasurementCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg);
   void MeasurementCallback(const geometry_msgs::PoseStampedConstPtr & msg);
   void MeasurementCallback(const geometry_msgs::TransformStampedConstPtr & msg);
 

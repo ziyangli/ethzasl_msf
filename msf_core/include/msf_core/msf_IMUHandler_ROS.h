@@ -28,33 +28,25 @@ class IMUHandler_ROS : public IMUHandler<EKFState_T> {
   ros::Subscriber subImuCustom_;  ///< subscriber to IMU readings for asctec custom
 
  public:
-  IMUHandler_ROS(MSF_SensorManager<EKFState_T>& mng,
-                 const std::string& topic_namespace,
-                 const std::string& parameternamespace)
-      : IMUHandler<EKFState_T>(mng, topic_namespace, parameternamespace) {
+  IMUHandler_ROS(MSF_SensorManager<EKFState_T>& mng, const std::string& topic_namespace, const std::string& parameternamespace) : IMUHandler<EKFState_T>(mng, topic_namespace, parameternamespace) {
 
     ros::NodeHandle nh(topic_namespace);
 
-    subImu_ = nh.subscribe("imu_state_input", 100, &IMUHandler_ROS::IMUCallback,
-                           this);
-    subState_ = nh.subscribe("hl_state_input", 10,
-                             &IMUHandler_ROS::StateCallback, this);
+    subImu_ = nh.subscribe("imu_state_input", 100, &IMUHandler_ROS::IMUCallback, this);
+    subState_ = nh.subscribe("hl_state_input", 10, &IMUHandler_ROS::StateCallback, this);
   }
 
   virtual ~IMUHandler_ROS() { }
 
   void StateCallback(const sensor_fusion_comm::ExtEkfConstPtr & msg) {
-    static_cast<MSF_SensorManagerROS<EKFState_T>&>(this->manager_)
-        .SetHLControllerStateBuffer(*msg);
+    static_cast<MSF_SensorManagerROS<EKFState_T>&>(this->manager_).SetHLControllerStateBuffer(*msg);
 
     // Get the imu values.
     msf_core::Vector3 linacc;
-    linacc << msg->linear_acceleration.x, msg->linear_acceleration.y, msg
-        ->linear_acceleration.z;
+    linacc << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
 
     msf_core::Vector3 angvel;
-    angvel << msg->angular_velocity.x, msg->angular_velocity.y, msg
-        ->angular_velocity.z;
+    angvel << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
 
     int32_t flag = msg->flag;
     // Make sure we tell the HL to ignore if data playback is on.
@@ -63,21 +55,16 @@ class IMUHandler_ROS : public IMUHandler<EKFState_T> {
 
     bool isnumeric = true;
     if (flag == sensor_fusion_comm::ExtEkf::current_state) {
-      isnumeric = CheckForNumeric(
-          Eigen::Map<const Eigen::Matrix<float, 10, 1> >(msg->state.data()),
-          "before prediction p,v,q");
+      isnumeric = CheckForNumeric(Eigen::Map<const Eigen::Matrix<float, 10, 1> >(msg->state.data()), "before prediction p,v,q");
     }
 
     // Get the propagated states.
     msf_core::Vector3 p, v;
     msf_core::Quaternion q;
 
-    p = Eigen::Matrix<double, 3, 1>(msg->state[0], msg->state[1],
-                                    msg->state[2]);
-    v = Eigen::Matrix<double, 3, 1>(msg->state[3], msg->state[4],
-                                    msg->state[5]);
-    q = Eigen::Quaternion<double>(msg->state[6], msg->state[7], msg->state[8],
-                                  msg->state[9]);
+    p = Eigen::Matrix<double, 3, 1>(msg->state[0], msg->state[1], msg->state[2]);
+    v = Eigen::Matrix<double, 3, 1>(msg->state[3], msg->state[4], msg->state[5]);
+    q = Eigen::Quaternion<double>(msg->state[6], msg->state[7], msg->state[8], msg->state[9]);
     q.normalize();
 
     bool is_already_propagated = false;
@@ -85,30 +72,23 @@ class IMUHandler_ROS : public IMUHandler<EKFState_T> {
       is_already_propagated = true;
     }
 
-    this->ProcessState(linacc, angvel, p, v, q, is_already_propagated,
-                        msg->header.stamp.toSec(), msg->header.seq);
+    this->ProcessState(linacc, angvel, p, v, q, is_already_propagated, msg->header.stamp.toSec(), msg->header.seq);
   }
 
   void IMUCallback(const sensor_msgs::ImuConstPtr & msg) {
     static int lastseq = constants::INVALID_SEQUENCE;
-    if (static_cast<int>(msg->header.seq) != lastseq + 1
-        && lastseq != constants::INVALID_SEQUENCE) {
-      MSF_WARN_STREAM(
-          "msf_core: imu message drop curr seq:" << msg->header.seq
-              << " expected: " << lastseq + 1);
+    if (static_cast<int>(msg->header.seq) != lastseq + 1 && lastseq != constants::INVALID_SEQUENCE) {
+      MSF_WARN_STREAM("msf_core: imu message drop curr seq:" << msg->header.seq << " expected: " << lastseq + 1);
     }
     lastseq = msg->header.seq;
 
     msf_core::Vector3 linacc;
-    linacc << msg->linear_acceleration.x, msg->linear_acceleration.y, msg
-        ->linear_acceleration.z;
+    linacc << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
 
     msf_core::Vector3 angvel;
-    angvel << msg->angular_velocity.x, msg->angular_velocity.y, msg
-        ->angular_velocity.z;
+    angvel << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
 
-    this->ProcessIMU(linacc, angvel, msg->header.stamp.toSec(),
-                      msg->header.seq);
+    this->ProcessIMU(linacc, angvel, msg->header.stamp.toSec(), msg->header.seq);
   }
 
   virtual bool Initialize() {

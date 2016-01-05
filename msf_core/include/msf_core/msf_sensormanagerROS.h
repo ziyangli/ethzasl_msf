@@ -79,30 +79,22 @@ struct MSF_SensorManagerROS : public msf_core::MSF_SensorManager<EKFState_T> {
 
   MSF_SensorManagerROS(ros::NodeHandle pnh = ros::NodeHandle("~core")) {
     reconfServer_ = new ReconfigureServer(pnh);
-    ReconfigureServer::CallbackType f = boost::bind(
-        &MSF_SensorManagerROS::Config, this, _1, _2);
+    ReconfigureServer::CallbackType f = boost::bind(&MSF_SensorManagerROS::Config, this, _1, _2);
     reconfServer_->setCallback(f);
 
     pnh.param("data_playback", this->data_playback_, false);
 
     ros::NodeHandle nh("msf_core");
 
-    pubState_ = nh.advertise < sensor_fusion_comm::DoubleArrayStamped
-        > ("state_out", 100);
-    pubCorrect_ = nh.advertise < sensor_fusion_comm::ExtEkf > ("correction", 1);
-    pubPose_ = nh.advertise < geometry_msgs::PoseWithCovarianceStamped
-        > ("pose", 100);
-    pubOdometry_ = nh.advertise < nav_msgs::Odometry> ("odometry", 100);
-    pubPoseAfterUpdate_ = nh.advertise
-        < geometry_msgs::PoseWithCovarianceStamped > ("pose_after_update", 100);
-    pubPoseCrtl_ = nh.advertise < sensor_fusion_comm::ExtState
-        > ("ext_state", 1);
-    pubCovCore_ = nh.advertise<sensor_fusion_comm::DoubleMatrixStamped>(
-        "cov_core", 10);
-    pubCovAux_ = nh.advertise<sensor_fusion_comm::DoubleMatrixStamped>(
-        "cov_aux", 10);
-    pubCovCoreAux_ = nh.advertise<sensor_fusion_comm::DoubleMatrixStamped>(
-        "cov_core_aux", 10);
+    pubState_ = nh.advertise<sensor_fusion_comm::DoubleArrayStamped>("state_out", 100);
+    pubCorrect_ = nh.advertise<sensor_fusion_comm::ExtEkf>("correction", 1);
+    pubPose_ = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("pose", 100);
+    pubOdometry_ = nh.advertise<nav_msgs::Odometry>("odometry", 100);
+    pubPoseAfterUpdate_ = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("pose_after_update", 100);
+    pubPoseCrtl_ = nh.advertise<sensor_fusion_comm::ExtState>("ext_state", 1);
+    pubCovCore_ = nh.advertise<sensor_fusion_comm::DoubleMatrixStamped>("cov_core", 10);
+    pubCovAux_ = nh.advertise<sensor_fusion_comm::DoubleMatrixStamped>("cov_aux", 10);
+    pubCovCoreAux_ = nh.advertise<sensor_fusion_comm::DoubleMatrixStamped>("cov_core_aux", 10);
 
     hl_state_buf_.state.resize(HLI_EKF_STATE_SIZE, 0);
 
@@ -119,7 +111,7 @@ struct MSF_SensorManagerROS : public msf_core::MSF_SensorManager<EKFState_T> {
     for (unsigned int i = 0; i < topics.size(); i++)
       topicsStr += ("\t\t" + topics.at(i) + "\n");
 
-    MSF_INFO_STREAM(""<< topicsStr);
+    MSF_INFO_STREAM("" << topicsStr);
   }
 
   virtual ~MSF_SensorManagerROS() {
@@ -185,10 +177,7 @@ struct MSF_SensorManagerROS : public msf_core::MSF_SensorManager<EKFState_T> {
     msgCorrect_.linear_acceleration.z = 0;
 
     msgCorrect_.state.resize(HLI_EKF_STATE_SIZE);
-    boost::fusion::for_each(
-        state->statevars,
-        msf_tmp::CoreStatetoDoubleArray<std::vector<float>, StateSequence_T>(
-            msgCorrect_.state));
+    boost::fusion::for_each(state->statevars, msf_tmp::CoreStatetoDoubleArray<std::vector<float>, StateSequence_T>(msgCorrect_.state));
 
     msgCorrect_.flag = sensor_fusion_comm::ExtEkf::initialization;
     pubCorrect_.publish(msgCorrect_);
@@ -338,10 +327,7 @@ struct MSF_SensorManagerROS : public msf_core::MSF_SensorManager<EKFState_T> {
           .template Get<StateDefinition_T::q>();
       transform.setOrigin(tf::Vector3(pos[0], pos[1], pos[2]));
       transform.setRotation(tf::Quaternion(ori.x(), ori.y(), ori.z(), ori.w()));
-      tf_broadcaster_.sendTransform(
-          tf::StampedTransform(
-              transform, ros::Time::now() /*ros::Time(latestState->time_)*/,
-              "world", "state"));
+      tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now() /*ros::Time(latestState->time_)*/, "world", "state"));
     }
 
     if (pubCovCore_.getNumSubscribers()) {

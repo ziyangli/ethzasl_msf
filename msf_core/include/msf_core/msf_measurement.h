@@ -40,37 +40,22 @@ class MSF_MeasurementBase {
    * \brief The method called by the msf_core to apply the measurement
    * represented by this object.
    */
-  virtual void Apply(shared_ptr<EKFState_T> stateWithCovariance,
-                     MSF_Core<EKFState_T>& core) = 0;
+  virtual void Apply(shared_ptr<EKFState_T> stateWithCovariance, MSF_Core<EKFState_T>& core) = 0;
   virtual std::string Type() = 0;
   int sensorID_;
   bool isabsolute_;
   double time;  ///< The time_ this measurement was taken.
  protected:
   /**
-   * Main update routine called by a given sensor, will apply the measurement to
-   * the state inside the core.
+   * Main update routine called by a given sensor, will apply the measurement to the state inside the core.
    */
   template<class H_type, class Res_type, class R_type>
-  void CalculateAndApplyCorrection(
-      shared_ptr<EKFState_T> state, MSF_Core<EKFState_T>& core,
-      const Eigen::MatrixBase<H_type>& H,
-      const Eigen::MatrixBase<Res_type>& residual,
-      const Eigen::MatrixBase<R_type>& R);
+  void CalculateAndApplyCorrection( shared_ptr<EKFState_T> state, MSF_Core<EKFState_T>& core, const Eigen::MatrixBase<H_type>& H, const Eigen::MatrixBase<Res_type>& residual, const Eigen::MatrixBase<R_type>& R);
 
-  void CalculateAndApplyCorrection(shared_ptr<EKFState_T> state,
-                                   MSF_Core<EKFState_T>& core,
-                                   const Eigen::MatrixXd& H,
-                                   const Eigen::MatrixXd& residual,
-                                   const Eigen::MatrixXd& R);
+  void CalculateAndApplyCorrection(shared_ptr<EKFState_T> state, MSF_Core<EKFState_T>& core, const Eigen::MatrixXd& H, const Eigen::MatrixXd& residual, const Eigen::MatrixXd& R);
 
   template<class H_type, class Res_type, class R_type>
-  void CalculateAndApplyCorrectionRelative(
-      shared_ptr<EKFState_T> state_old, shared_ptr<EKFState_T> state_new,
-      MSF_Core<EKFState_T>& core, const Eigen::MatrixBase<H_type>& H_old,
-      const Eigen::MatrixBase<H_type>& H_new,
-      const Eigen::MatrixBase<Res_type>& residual,
-      const Eigen::MatrixBase<R_type>& R);
+  void CalculateAndApplyCorrectionRelative(shared_ptr<EKFState_T> state_old, shared_ptr<EKFState_T> state_new, MSF_Core<EKFState_T>& core, const Eigen::MatrixBase<H_type>& H_old, const Eigen::MatrixBase<H_type>& H_new, const Eigen::MatrixBase<Res_type>& residual, const Eigen::MatrixBase<R_type>& R);
 
 };
 
@@ -116,30 +101,25 @@ class MSF_Measurement : public MSF_MeasurementBase<EKFState_T> {
   typedef T Measurement_type;
   typedef boost::shared_ptr<T const> Measurement_ptr;
 
-  MSF_Measurement(bool isAbsoluteMeasurement, int sensorID)
-      : MSF_MeasurementBase<EKFState_T>(isAbsoluteMeasurement, sensorID) {
+  MSF_Measurement(bool isAbsoluteMeasurement, int sensorID) : MSF_MeasurementBase<EKFState_T>(isAbsoluteMeasurement, sensorID) {
     R_.setZero();
   }
-  virtual ~MSF_Measurement() { }
-  void MakeFromSensorReading(const boost::shared_ptr<T const> reading,
-                             double timestamp) {
+
+  virtual ~MSF_Measurement() {}
+
+  void MakeFromSensorReading(const boost::shared_ptr<T const> reading, double timestamp) {
+
     this->time = timestamp;
     MakeFromSensorReadingImpl(reading);
 
     // Check whether the user has set R.
     if (R_.minCoeff() == 0.0 && R_.maxCoeff() == 0.0) {
-      MSF_WARN_STREAM_THROTTLE(
-          2,
-          "The measurement covariance matrix seems to be not set for the current "
-          "measurement. Please double check!");
+      MSF_WARN_STREAM_THROTTLE(2, "The measurement covariance matrix seems to be not set for the current measurement. Please double check!");
     }
 
     for (int i = 0; i < R_.RowsAtCompileTime; ++i) {
       if (R_(i, i) == 0.0) {
-        MSF_WARN_STREAM_THROTTLE(
-            2,
-            "The measurement covariance matrix has some diagonal elements set to "
-            "zero. Please double check!");
+        MSF_WARN_STREAM_THROTTLE(2, "The measurement covariance matrix has some diagonal elements set to zero. Please double check!");
       }
     }
   }

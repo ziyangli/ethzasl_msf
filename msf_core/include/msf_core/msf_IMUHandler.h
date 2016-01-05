@@ -26,31 +26,18 @@ class IMUHandler : public SensorHandler<EKFState_T> {
  protected:
   shared_ptr<MSF_Core<EKFState_T> > core_;
  public:
-  IMUHandler(MSF_SensorManager<EKFState_T>& mng,
-             const std::string& topic_namespace,
-             const std::string& parameternamespace)
-      : SensorHandler<EKFState_T>(mng, topic_namespace, parameternamespace) {
+  IMUHandler(MSF_SensorManager<EKFState_T>& mng, const std::string& topic_namespace, const std::string& parameternamespace) : SensorHandler<EKFState_T>(mng, topic_namespace, parameternamespace) {
     core_ = mng.msf_core_;
   }
-  virtual ~IMUHandler() {
-  }
-  ;
+  virtual ~IMUHandler() {};
   virtual bool Initialize() = 0;
-  void ProcessIMU(const msf_core::Vector3& linear_acceleration,
-                   const msf_core::Vector3& angular_velocity,
-                   const double& msg_stamp, size_t msg_seq) {
-    core_->ProcessIMU(linear_acceleration, angular_velocity, msg_stamp,
-                       msg_seq);
+
+  void ProcessIMU(const msf_core::Vector3& linear_acceleration, const msf_core::Vector3& angular_velocity, const double& msg_stamp, size_t msg_seq) {
+    core_->ProcessIMU(linear_acceleration, angular_velocity, msg_stamp, msg_seq);
   }
-  void ProcessState(const msf_core::Vector3& linear_acceleration,
-                     const msf_core::Vector3& angular_velocity,
-                     const msf_core::Vector3& p, const msf_core::Vector3& v,
-                     const msf_core::Quaternion& q, bool is_already_propagated,
-                     const double& msg_stamp, size_t msg_seq) {
-    core_->ProcessExternallyPropagatedState(linear_acceleration,
-                                            angular_velocity, p, v, q,
-                                            is_already_propagated,
-                                            msg_stamp, msg_seq);
+
+  void ProcessState(const msf_core::Vector3& linear_acceleration, const msf_core::Vector3& angular_velocity, const msf_core::Vector3& p, const msf_core::Vector3& v, const msf_core::Quaternion& q, bool is_already_propagated, const double& msg_stamp, size_t msg_seq) {
+    core_->ProcessExternallyPropagatedState(linear_acceleration, angular_velocity, p, v, q, is_already_propagated, msg_stamp, msg_seq);
   }
 };
 }

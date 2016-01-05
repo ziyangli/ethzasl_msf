@@ -38,13 +38,9 @@ namespace msf_core {
 // const_cast the state object to const to use the overload.
 template<typename stateVector_T, typename StateDefinition_T>
 template<int INDEX>
-inline typename boost::fusion::result_of::at_c<stateVector_T, INDEX>::type
-GenericState_T<stateVector_T, StateDefinition_T>::GetStateVariable() {
+inline typename boost::fusion::result_of::at_c<stateVector_T, INDEX>::type GenericState_T<stateVector_T, StateDefinition_T>::GetStateVariable() {
 
-  static_assert(
-      (msf_tmp::IsReferenceType<typename
-          boost::fusion::result_of::at_c<stateVector_T, INDEX >::type>::value),
-      "Assumed that boost::fusion would return a reference type here, which is not the case.");
+  static_assert((msf_tmp::IsReferenceType<typename boost::fusion::result_of::at_c<stateVector_T, INDEX >::type>::value), "Assumed that boost::fusion would return a reference type here, which is not the case.");
 
   return boost::fusion::at < boost::mpl::int_<INDEX> > (statevars);
 }
@@ -54,26 +50,16 @@ GenericState_T<stateVector_T, StateDefinition_T>::GetStateVariable() {
 // to const to use the overload.
 template<typename stateVector_T, typename StateDefinition_T>
 template<int INDEX>
-inline typename msf_tmp::StripReference<
-    typename boost::fusion::result_of::at_c<stateVector_T, INDEX>::type>::result_t::value_t&
-GenericState_T<stateVector_T, StateDefinition_T>::Get() {
-  static_assert(
-      (msf_tmp::IsReferenceType<typename
-          boost::fusion::result_of::at_c<stateVector_T, INDEX >::type>::value),
-      "Assumed that boost::fusion would return a reference type here, which is not the case.");
+inline typename msf_tmp::StripReference<typename boost::fusion::result_of::at_c<stateVector_T, INDEX>::type>::result_t::value_t& GenericState_T<stateVector_T, StateDefinition_T>::Get() {
+  static_assert((msf_tmp::IsReferenceType<typename boost::fusion::result_of::at_c<stateVector_T, INDEX >::type>::value), "Assumed that boost::fusion would return a reference type here, which is not the case.");
 
   return boost::fusion::at < boost::mpl::int_<INDEX> > (statevars).state_;
 }
 
 // Apply the correction vector to all state vars.
 template<typename stateVector_T, typename StateDefinition_T>
-inline void GenericState_T<stateVector_T, StateDefinition_T>::Correct(
-    const Eigen::Matrix<double, nErrorStatesAtCompileTime, 1>& correction) {
-  boost::fusion::for_each(
-      statevars,
-      msf_tmp::CorrectState<
-          const Eigen::Matrix<double, nErrorStatesAtCompileTime, 1>,
-          stateVector_T>(correction));
+inline void GenericState_T<stateVector_T, StateDefinition_T>::Correct(const Eigen::Matrix<double, nErrorStatesAtCompileTime, 1>& correction) {
+  boost::fusion::for_each(statevars, msf_tmp::CorrectState<const Eigen::Matrix<double, nErrorStatesAtCompileTime, 1>, stateVector_T>(correction));
 }
 
 // Returns the Q-block of the state at position INDEX in the state list, not
@@ -204,12 +190,8 @@ GenericState_T<stateVector_T, StateDefinition_T>::ToEigenVector() {
 
 //TODO (slynen) Template to container.
 template<typename stateVector_T, typename StateDefinition_T>
-void GenericState_T<stateVector_T, StateDefinition_T>::CalculateIndicesInErrorState(
-    std::vector<std::tuple<int, int, int> >& vec) {
-  boost::fusion::for_each(
-      statevars,
-      msf_tmp::GetIndicesInErrorState<std::vector<std::tuple<int, int, int> >,
-          stateVector_T>(vec));
+void GenericState_T<stateVector_T, StateDefinition_T>::CalculateIndicesInErrorState(std::vector<std::tuple<int, int, int> >& vec) {
+  boost::fusion::for_each(statevars, msf_tmp::GetIndicesInErrorState<std::vector<std::tuple<int, int, int> >, stateVector_T>(vec));
 }
 
 template<typename stateVector_T, typename StateDefinition_T>
@@ -337,17 +319,14 @@ void GenericState_T<stateVector_T, StateDefinition_T>::Reset(
 
 /// Writes the covariance corresponding to position and attitude to cov.
 template<typename stateVector_T, typename StateDefinition_T>
-void GenericState_T<stateVector_T, StateDefinition_T>::GetPoseCovariance(
-    geometry_msgs::PoseWithCovariance::_covariance_type& cov) {
+void GenericState_T<stateVector_T, StateDefinition_T>::GetPoseCovariance(geometry_msgs::PoseWithCovariance::_covariance_type& cov) {
 
   typedef typename msf_tmp::GetEnumStateType<stateVector_T, StateDefinition_T::p>::value p_type;
   typedef typename msf_tmp::GetEnumStateType<stateVector_T, StateDefinition_T::q>::value q_type;
 
   // Get indices of position and attitude in the covariance matrix.
-  static const int idxstartcorr_p = msf_tmp::GetStartIndex<stateVector_T,
-      p_type, msf_tmp::CorrectionStateLengthForType>::value;
-  static const int idxstartcorr_q = msf_tmp::GetStartIndex<stateVector_T,
-      q_type, msf_tmp::CorrectionStateLengthForType>::value;
+  static const int idxstartcorr_p = msf_tmp::GetStartIndex<stateVector_T, p_type, msf_tmp::CorrectionStateLengthForType>::value;
+  static const int idxstartcorr_q = msf_tmp::GetStartIndex<stateVector_T, q_type, msf_tmp::CorrectionStateLengthForType>::value;
 
   /*        |  cov_p_p  |  cov_p_q  |
    *        |           |           |
@@ -367,17 +346,14 @@ void GenericState_T<stateVector_T, StateDefinition_T>::GetPoseCovariance(
 
 /// Writes the covariance corresponding to velocity and attitude to cov.
 template<typename stateVector_T, typename StateDefinition_T>
-void GenericState_T<stateVector_T, StateDefinition_T>::GetVelocityAttitudeCovariance(
-    Eigen::Matrix<double, 6, 6>& cov) {
+void GenericState_T<stateVector_T, StateDefinition_T>::GetVelocityAttitudeCovariance(Eigen::Matrix<double, 6, 6>& cov) {
 
   typedef typename msf_tmp::GetEnumStateType<stateVector_T, StateDefinition_T::v>::value v_type;
   typedef typename msf_tmp::GetEnumStateType<stateVector_T, StateDefinition_T::q>::value q_type;
 
   // Get indices of position and attitude in the covariance matrix.
-  static const int idxstartcorr_v = msf_tmp::GetStartIndex<stateVector_T,
-      v_type, msf_tmp::CorrectionStateLengthForType>::value;
-  static const int idxstartcorr_q = msf_tmp::GetStartIndex<stateVector_T,
-      q_type, msf_tmp::CorrectionStateLengthForType>::value;
+  static const int idxstartcorr_v = msf_tmp::GetStartIndex<stateVector_T, v_type, msf_tmp::CorrectionStateLengthForType>::value;
+  static const int idxstartcorr_q = msf_tmp::GetStartIndex<stateVector_T, q_type, msf_tmp::CorrectionStateLengthForType>::value;
 
   /*        |  cov_v_v  |  cov_v_q  |
    *        |           |           |
@@ -392,21 +368,18 @@ void GenericState_T<stateVector_T, StateDefinition_T>::GetVelocityAttitudeCovari
   cov.block<3,3>(3,3) = P.template block<3,3>(idxstartcorr_q, idxstartcorr_q);
 }
 
-/// Writes the covariance corresponding to velocity and angular velocity expressed in the IMU frame
-// to cov.
+/// Writes the covariance corresponding to velocity and angular velocity expressed in the IMU frame to cov.
 template<typename stateVector_T, typename StateDefinition_T>
-void GenericState_T<stateVector_T, StateDefinition_T>::GetTwistCovarianceInImuFrame(
-    geometry_msgs::TwistWithCovariance::_covariance_type& cov) {
+void GenericState_T<stateVector_T, StateDefinition_T>::GetTwistCovarianceInImuFrame(geometry_msgs::TwistWithCovariance::_covariance_type& cov) {
   typedef typename msf_tmp::GetEnumStateType<stateVector_T, StateDefinition_T::b_w>::value b_w_type;
 
   // Get index of gyro bias in the covariance matrix.
-  static const int idxstartcorr_b_w = msf_tmp::GetStartIndex<stateVector_T,
-      b_w_type, msf_tmp::CorrectionStateLengthForType>::value;
+  static const int idxstartcorr_b_w = msf_tmp::GetStartIndex<stateVector_T, b_w_type, msf_tmp::CorrectionStateLengthForType>::value;
 
   const msf_core::Quaternion& q_W_I = Get<StateDefinition_T::q>();
-  const msf_core::Matrix3 R_W_I = q_W_I.toRotationMatrix();
-  const msf_core::Vector3& v_W =  Get<StateDefinition_T::v>();
-  const msf_core::Vector3 v_I =  R_W_I.transpose() * v_W;
+  const msf_core::Matrix3 R_W_I     = q_W_I.toRotationMatrix();
+  const msf_core::Vector3& v_W      =  Get<StateDefinition_T::v>();
+  const msf_core::Vector3 v_I       =  R_W_I.transpose() * v_W;
 
   msf_core::Matrix6 cov_velocity_attitude_W;
   GetVelocityAttitudeCovariance(cov_velocity_attitude_W);
@@ -430,13 +403,11 @@ void GenericState_T<stateVector_T, StateDefinition_T>::GetTwistCovarianceInImuFr
 
   // Add covariance of gyro measurement and gyro bias to get the covariance of the corrected
   // angular velocity.
-  covariance_map.block<3,3>(3,3) = P.template block<3,3>(idxstartcorr_b_w, idxstartcorr_b_w) +
-                                   cov_noise_gyr;
+  covariance_map.block<3,3>(3,3) = P.template block<3,3>(idxstartcorr_b_w, idxstartcorr_b_w) + cov_noise_gyr;
 }
 
 template<typename stateVector_T, typename StateDefinition_T>
-void GenericState_T<stateVector_T, StateDefinition_T>::GetCoreCovariance(
-    sensor_fusion_comm::DoubleMatrixStamped& cov) {
+void GenericState_T<stateVector_T, StateDefinition_T>::GetCoreCovariance(sensor_fusion_comm::DoubleMatrixStamped& cov) {
 
   const int n_core = nCoreErrorStatesAtCompileTime;
   cov.data.resize(n_core * n_core);
@@ -451,8 +422,7 @@ void GenericState_T<stateVector_T, StateDefinition_T>::GetCoreCovariance(
 }
 
 template<typename stateVector_T, typename StateDefinition_T>
-void GenericState_T<stateVector_T, StateDefinition_T>::GetAuxCovariance(
-    sensor_fusion_comm::DoubleMatrixStamped& cov) {
+void GenericState_T<stateVector_T, StateDefinition_T>::GetAuxCovariance(sensor_fusion_comm::DoubleMatrixStamped& cov) {
 
   const int n_core = nCoreErrorStatesAtCompileTime;
   const int n_aux = nErrorStatesAtCompileTime-n_core;
@@ -470,8 +440,7 @@ void GenericState_T<stateVector_T, StateDefinition_T>::GetAuxCovariance(
 }
 
 template<typename stateVector_T, typename StateDefinition_T>
-void GenericState_T<stateVector_T, StateDefinition_T>::GetCoreAuxCovariance(
-    sensor_fusion_comm::DoubleMatrixStamped& cov) {
+void GenericState_T<stateVector_T, StateDefinition_T>::GetCoreAuxCovariance(sensor_fusion_comm::DoubleMatrixStamped& cov) {
 
   const int n_core = nCoreErrorStatesAtCompileTime;
   const int n_aux = nErrorStatesAtCompileTime - n_core;

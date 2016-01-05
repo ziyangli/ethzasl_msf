@@ -24,55 +24,30 @@
 
 namespace msf_pose_sensor {
 template<typename MEASUREMENT_TYPE, typename MANAGER_TYPE>
-PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::PoseSensorHandler(
-    MANAGER_TYPE& meas, std::string topic_namespace,
-    std::string parameternamespace, bool distortmeas)
-    : SensorHandler<msf_updates::EKFState>(meas, topic_namespace,
-                                           parameternamespace),
-      n_zp_(1e-6),
-      n_zq_(1e-6),
-      delay_(0),
-      timestamp_previous_pose_(0) {
+PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::PoseSensorHandler(MANAGER_TYPE& meas, std::string topic_namespace, std::string parameternamespace, bool distortmeas) : SensorHandler<msf_updates::EKFState>(meas, topic_namespace, parameternamespace), n_zp_(1e-6), n_zq_(1e-6), delay_(0), timestamp_previous_pose_(0) {
   ros::NodeHandle pnh("~/" + parameternamespace);
 
-  MSF_INFO_STREAM(
-      "Loading parameters for pose sensor from namespace: "
-          << pnh.getNamespace());
+  MSF_INFO_STREAM("Loading parameters for pose sensor from namespace: " << pnh.getNamespace());
 
-  pnh.param("pose_absolute_measurements", provides_absolute_measurements_,
-            true);
+  pnh.param("pose_absolute_measurements", provides_absolute_measurements_, true);
   pnh.param("pose_measurement_world_sensor", measurement_world_sensor_, true);
   pnh.param("pose_use_fixed_covariance", use_fixed_covariance_, false);
   pnh.param("pose_measurement_minimum_dt", pose_measurement_minimum_dt_, 0.05);
 
 
-  MSF_INFO_STREAM_COND(measurement_world_sensor_, "Pose sensor is interpreting "
-                       "measurement as sensor w.r.t. world");
-  MSF_INFO_STREAM_COND(
-      !measurement_world_sensor_,
-      "Pose sensor is interpreting measurement as world w.r.t. "
-      "sensor (e.g. ethzasl_ptam)");
+  MSF_INFO_STREAM_COND(measurement_world_sensor_, "Pose sensor is interpreting measurement as sensor w.r.t. world");
+  MSF_INFO_STREAM_COND(!measurement_world_sensor_, "Pose sensor is interpreting measurement as world w.r.t. sensor (e.g. ethzasl_ptam)");
 
-  MSF_INFO_STREAM_COND(use_fixed_covariance_, "Pose sensor is using fixed "
-                       "covariance");
-  MSF_INFO_STREAM_COND(!use_fixed_covariance_,
-                       "Pose sensor is using covariance "
-                       "from sensor");
+  MSF_INFO_STREAM_COND(use_fixed_covariance_, "Pose sensor is using fixed covariance");
+  MSF_INFO_STREAM_COND(!use_fixed_covariance_, "Pose sensor is using covariance from sensor");
 
-  MSF_INFO_STREAM_COND(provides_absolute_measurements_,
-                       "Pose sensor is handling "
-                       "measurements as absolute values");
-  MSF_INFO_STREAM_COND(!provides_absolute_measurements_, "Pose sensor is "
-                       "handling measurements as relative values");
+  MSF_INFO_STREAM_COND(provides_absolute_measurements_, "Pose sensor is handling measurements as absolute values");
+  MSF_INFO_STREAM_COND(!provides_absolute_measurements_, "Pose sensor is handling measurements as relative values");
 
   ros::NodeHandle nh("msf_updates/" + topic_namespace);
-  subPoseWithCovarianceStamped_ =
-      nh.subscribe < geometry_msgs::PoseWithCovarianceStamped
-          > ("pose_with_covariance_input", 20, &PoseSensorHandler::MeasurementCallback, this);
-  subTransformStamped_ = nh.subscribe < geometry_msgs::TransformStamped
-      > ("transform_input", 20, &PoseSensorHandler::MeasurementCallback, this);
-  subPoseStamped_ = nh.subscribe < geometry_msgs::PoseStamped
-      > ("pose_input", 20, &PoseSensorHandler::MeasurementCallback, this);
+  subPoseWithCovarianceStamped_ = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("pose_with_covariance_input", 20, &PoseSensorHandler::MeasurementCallback, this);
+  subTransformStamped_ = nh.subscribe<geometry_msgs::TransformStamped>("transform_input", 20, &PoseSensorHandler::MeasurementCallback, this);
+  subPoseStamped_ = nh.subscribe<geometry_msgs::PoseStamped>("pose_input", 20, &PoseSensorHandler::MeasurementCallback, this);
 
   z_p_.setZero();
   z_q_.setIdentity();
@@ -103,15 +78,12 @@ PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::PoseSensorHandler(
     double distortscale_stddev;
     pnh.param("distortscale_stddev", distortscale_stddev, 0.0);
 
-    distorter_.reset(
-        new msf_updates::PoseDistorter(meanpos, stddevpos, meanatt, stddevatt,
-                                       distortscale_mean, distortscale_stddev));
+    distorter_.reset(new msf_updates::PoseDistorter(meanpos, stddevpos, meanatt, stddevatt, distortscale_mean, distortscale_stddev));
   }
 }
 
 template<typename MEASUREMENT_TYPE, typename MANAGER_TYPE>
-void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::SetNoises(double n_zp,
-                                                                  double n_zq) {
+void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::SetNoises(double n_zp, double n_zq) {
   n_zp_ = n_zp;
   n_zq_ = n_zq;
 }
@@ -122,24 +94,18 @@ void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::SetDelay(double delay) {
 }
 
 template<typename MEASUREMENT_TYPE, typename MANAGER_TYPE>
-void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::ProcessPoseMeasurement(
-    const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg) {
+void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::ProcessPoseMeasurement(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg) {
   received_first_measurement_ = true;
 
   // Get the fixed states.
   int fixedstates = 0;
-  static_assert(msf_updates::EKFState::nStateVarsAtCompileTime < 32, "Your state "
-      "has more than 32 variables. The code needs to be changed here to have a "
-      "larger variable to mark the fixed_states");
+  static_assert(msf_updates::EKFState::nStateVarsAtCompileTime < 32, "Your state has more than 32 variables. The code needs to be changed here to have a larger variable to mark the fixed_states");
   // Do not exceed the 32 bits of int.
 
   // Get all the fixed states and set flag bits.
   MANAGER_TYPE* mngr = dynamic_cast<MANAGER_TYPE*>(&manager_);
 
-  // TODO(acmarkus): if we have multiple sensor handlers, they all share the same dynparams,
-  // which me maybe don't want. E.g. if we have this for multiple AR Markers, we
-  // may want to keep one fix --> move this to fixed parameters? Could be handled
-  // with parameter namespace then.
+  // TODO(acmarkus): if we have multiple sensor handlers, they all share the same dynparams, which me maybe don't want. E.g. if we have this for multiple AR Markers, we may want to keep one fix --> move this to fixed parameters? Could be handled with parameter namespace then.
   if (mngr) {
     if (mngr->Getcfg().pose_fixed_scale) {
       fixedstates |= 1 << MEASUREMENT_TYPE::AuxState::L;
@@ -158,12 +124,7 @@ void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::ProcessPoseMeasurement(
     }
   }
 
-  shared_ptr < MEASUREMENT_TYPE
-      > meas(
-          new MEASUREMENT_TYPE(n_zp_, n_zq_, measurement_world_sensor_,
-                               use_fixed_covariance_,
-                               provides_absolute_measurements_, this->sensorID,
-                               fixedstates, distorter_));
+  shared_ptr<MEASUREMENT_TYPE> meas(new MEASUREMENT_TYPE(n_zp_, n_zq_, measurement_world_sensor_, use_fixed_covariance_, provides_absolute_measurements_, this->sensorID, fixedstates, distorter_));
 
   meas->MakeFromSensorReading(msg, msg->header.stamp.toSec() - delay_);
 
@@ -172,48 +133,34 @@ void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::ProcessPoseMeasurement(
 
   this->manager_.msf_core_->AddMeasurement(meas);
 }
-template<typename MEASUREMENT_TYPE, typename MANAGER_TYPE>
-void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::MeasurementCallback(
-    const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg) {
 
-  this->SequenceWatchDog(msg->header.seq,
-                         subPoseWithCovarianceStamped_.getTopic());
-  MSF_INFO_STREAM_ONCE(
-      "*** pose sensor got first measurement from topic "
-          << this->topic_namespace_ << "/"
-          << subPoseWithCovarianceStamped_.getTopic() << " ***");
+template<typename MEASUREMENT_TYPE, typename MANAGER_TYPE>
+void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::MeasurementCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg) {
+
+  this->SequenceWatchDog(msg->header.seq, subPoseWithCovarianceStamped_.getTopic());
+  MSF_INFO_STREAM_ONCE("*** pose sensor got first measurement from topic " << this->topic_namespace_ << "/" << subPoseWithCovarianceStamped_.getTopic() << " ***");
   ProcessPoseMeasurement(msg);
 }
 
 template<typename MEASUREMENT_TYPE, typename MANAGER_TYPE>
-void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::MeasurementCallback(
-    const geometry_msgs::TransformStampedConstPtr & msg) {
+void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::MeasurementCallback(const geometry_msgs::TransformStampedConstPtr & msg) {
   this->SequenceWatchDog(msg->header.seq, subTransformStamped_.getTopic());
-  MSF_INFO_STREAM_ONCE(
-      "*** pose sensor got first measurement from topic "
-          << this->topic_namespace_ << "/" << subTransformStamped_.getTopic()
-          << " ***");
+  MSF_INFO_STREAM_ONCE("*** pose sensor got first measurement from topic " << this->topic_namespace_ << "/" << subTransformStamped_.getTopic() << " ***");
 
   double time_now = msg->header.stamp.toSec();
   const double epsilon = 0.001; // Small time correction to avoid rounding errors in the timestamps.
   if (time_now - timestamp_previous_pose_ <= pose_measurement_minimum_dt_ - epsilon) {
-    MSF_WARN_STREAM_THROTTLE(30, "Pose measurement throttling is on, dropping messages"
-                             "to be below " +
-                             std::to_string(1/pose_measurement_minimum_dt_) + " Hz");
+    MSF_WARN_STREAM_THROTTLE(30, "Pose measurement throttling is on, dropping messages to be below " + std::to_string(1/pose_measurement_minimum_dt_) + " Hz");
     return;
   }
 
   timestamp_previous_pose_ = time_now;
 
-  geometry_msgs::PoseWithCovarianceStampedPtr pose(
-      new geometry_msgs::PoseWithCovarianceStamped());
+  geometry_msgs::PoseWithCovarianceStampedPtr pose(new geometry_msgs::PoseWithCovarianceStamped());
 
   if (!use_fixed_covariance_)  // Take covariance from sensor.
   {
-    MSF_WARN_STREAM_THROTTLE(
-        2,
-        "Provided message type without covariance but set fixed_covariance == "
-        "false at the same time. Discarding message.");
+    MSF_WARN_STREAM_THROTTLE(2, "Provided message type without covariance but set fixed_covariance == false at the same time. Discarding message.");
     return;
   }
 
@@ -233,23 +180,15 @@ void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::MeasurementCallback(
 }
 
 template<typename MEASUREMENT_TYPE, typename MANAGER_TYPE>
-void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::MeasurementCallback(
-    const geometry_msgs::PoseStampedConstPtr & msg) {
+void PoseSensorHandler<MEASUREMENT_TYPE, MANAGER_TYPE>::MeasurementCallback(const geometry_msgs::PoseStampedConstPtr & msg) {
   this->SequenceWatchDog(msg->header.seq, subPoseStamped_.getTopic());
-  MSF_INFO_STREAM_ONCE(
-      "*** pose sensor got first measurement from topic "
-          << this->topic_namespace_ << "/" << subPoseStamped_.getTopic()
-          << " ***");
+  MSF_INFO_STREAM_ONCE("*** pose sensor got first measurement from topic " << this->topic_namespace_ << "/" << subPoseStamped_.getTopic() << " ***");
 
-  geometry_msgs::PoseWithCovarianceStampedPtr pose(
-      new geometry_msgs::PoseWithCovarianceStamped());
+  geometry_msgs::PoseWithCovarianceStampedPtr pose(new geometry_msgs::PoseWithCovarianceStamped());
 
   if (!use_fixed_covariance_)  // Take covariance from sensor.
   {
-    MSF_WARN_STREAM_THROTTLE(
-        2,
-        "Provided message type without covariance but set fixed_covariance =="
-        "false at the same time. Discarding message.");
+    MSF_WARN_STREAM_THROTTLE(2, "Provided message type without covariance but set fixed_covariance == false at the same time. Discarding message.");
     return;
   }
 
